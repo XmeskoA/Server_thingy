@@ -14,5 +14,6 @@ public class Main {
         int cislo= rset.getInt("int1");*/
         ServerSocket ss = new ServerSocket(6969);
         Socket soc = ss.accept();
+        //funguje push
     }
 }
