@@ -40,11 +40,14 @@ public class Server {
 
     public static String [] addUser(String uname, String passw, String email) throws SQLException {
         Statement stmt = conToDatabase();
-        String[] uData= new String[5];
+        String[] uData= new String[3];
         if (Server.userExists(email) == false) {
             String u_create = "Insert into users (username, password, email, godmode) values ('" +uname+ "','" +passw+ "','" +email+ "',0);";
             stmt.executeUpdate(u_create);
             System.out.println("User bol registrovany");
+            uData[0]=uname;
+            uData[1]= passw;
+            uData[2]= email;
         } else{
             //System.out.println("User uz existuje");
             uData[0]="nula";

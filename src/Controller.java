@@ -14,6 +14,10 @@ public class Controller {
                 Controller.registracia(clientSocket, reader);
 
             }
+            if (sprava.equals("userL")){
+               //potrebujem spravit v contreleri login funkciu
+            }
+
         }
     }
 
@@ -28,18 +32,20 @@ public class Controller {
             i++;
         }*/
         //String[] uData = new String[5];
-        String uData[] = Server.addUser(udaje[0], udaje[1], udaje[2]);
+        String[] uData = Server.addUser(udaje[0], udaje[1], udaje[2]);
         PrintWriter writer = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"), true);
         System.out.println(uData[0]);
         if (uData[0].equals("nula")) {
-            for (i = 0; i == 4; i++) {
+            for (i = 0; i<5; i++) {
                 writer.println(uData[i]);
                 System.out.println("som tu");
             }
-        } else {
-            for (i = 0; i == 4; i++) {
+        } if(!uData[0].equals("nula")) {
+            System.out.println("som signupnuty3");
+            for (i = 0; i<3; i++) {
+                System.out.println("som signupnuty1");
                 writer.println(uData[i]);
-                System.out.println("nie som tu");
+                System.out.println("som signupnuty2");
             }
 
         }
