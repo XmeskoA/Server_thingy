@@ -6,19 +6,28 @@ import java.sql.SQLException;
 public class Controller {
     public static void strom() throws IOException, SQLException {
         ServerSocket serverSocket = new ServerSocket(6969);
+        Socket clientSocket = serverSocket.accept();
         while (true) {
-            Socket clientSocket = serverSocket.accept();
+            System.out.println("cakam na pokyn...");
+            //Socket clientSocket = serverSocket.accept();
+            //System.out.println("cakam na pokyn...");
             BufferedReader reader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
             String sprava = reader.readLine();
             if (sprava.equals("addU")) {
+
                 Controller.registracia(clientSocket, reader);
 
             }
             if (sprava.equals("userL")){
-               //potrebujem spravit v contreleri login funkciu
+                System.out.println("Som v userL");
+                Controller.loginUserController(clientSocket, reader);
             }
-
+            if (sprava.equals("exit")){
+                clientSocket.close();
+            }
+            //clientSocket.close();
         }
+        //clientSocket.close();
     }
 
     public static void registracia(Socket clientSocket, BufferedReader reader) throws IOException, SQLException {
@@ -27,7 +36,8 @@ public class Controller {
         udaje[0]= reader.readLine();
         udaje[1]= reader.readLine();
         udaje[2]= reader.readLine();
-       /* while ((udaje[i]=reader.readLine()) != null) {
+        System.out.println("toto su moje udaje" + udaje[2]+ udaje[1]);
+       /*while ((udaje[i]=reader.readLine()) != null) {
             System.out.println(udaje[i]);
             i++;
         }*/
@@ -36,18 +46,29 @@ public class Controller {
         PrintWriter writer = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"), true);
         System.out.println(uData[0]);
         if (uData[0].equals("nula")) {
-            for (i = 0; i<5; i++) {
+            for (i = 0; i<3; i++) {
                 writer.println(uData[i]);
-                System.out.println("som tu");
+                System.out.println("uData sa rovnaju 0");
             }
         } if(!uData[0].equals("nula")) {
-            System.out.println("som signupnuty3");
+            System.out.println("som signupnuty!");
             for (i = 0; i<3; i++) {
-                System.out.println("som signupnuty1");
                 writer.println(uData[i]);
-                System.out.println("som signupnuty2");
             }
 
         }
     }
-}
+    public static void loginUserController (Socket clientSocket, BufferedReader reader) throws IOException, SQLException {
+        int i=0;
+        String email= reader.readLine();
+        String passw= reader.readLine();
+        String [] uData= Server.loginUser(email, passw);
+        System.out.println("prisli sme k odosielani login dat");
+        PrintWriter writer = new PrintWriter(new OutputStreamWriter(clientSocket.getOutputStream(), "UTF-8"), true);
+        for (i=0;i<5;i++){
+                writer.println(uData[i]);
+                System.out.println("odosielam" + uData[i]);
+            }
+        }
+    }
+
