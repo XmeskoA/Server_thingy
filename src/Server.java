@@ -1,3 +1,5 @@
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.sql.*;
 
 
@@ -63,20 +65,50 @@ public class Server {
         }
     }
 
-    public static boolean bookExists(String isbn, int ownerID) throws SQLException {
-        Connection con= Database.connect();
-        Statement stmt = con.createStatement();
-        String bname = "select * from books where isbn='" +isbn+ "' AND ownerID='" +ownerID+ "';";
-        ResultSet rset = stmt.executeQuery(bname);
-        //con.commit();
-        if (!rset.next()) {
-            stmt.close();
-            con.close();
+    public static boolean bookExists(String nazov, int ownerID) throws SQLException {
+        ResultSet rset = null;
+        PreparedStatement preparedStatement = null;
+        Connection con = null;
+
+        try {
+            con = Database.connect();
+            String selectQuery = "SELECT * FROM books WHERE title = ? AND ownerID = ? ";
+            preparedStatement = con.prepareStatement(selectQuery);
+            preparedStatement.setString(1, nazov);
+            preparedStatement.setInt(2, ownerID);
+            rset = preparedStatement.executeQuery();
+            //con.commit();
+
+            if (!rset.next()) {
+                // ResultSet is empty
+                System.out.println("rset was empty for some reason");
+                return false;
+            } else {
+                // ResultSet is not empty
+                // Extract data if needed
+                System.out.println("rset was full for some reason");
+                return true;
+            }
+        } catch (SQLException e) {
+            // Handle the exception
+            e.printStackTrace();
             return false;
-        } else{
-            stmt.close();
-            con.close();
-            return true;
+        } finally {
+            // Close resources
+            try {
+                if (preparedStatement != null) {
+                    preparedStatement.close();
+                }
+                if (rset != null) {
+                    rset.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            } catch (SQLException e) {
+                // Handle the exception during closing
+                e.printStackTrace();
+            }
         }
     }
 
@@ -156,39 +188,93 @@ public class Server {
 
 
     public static void addBook(String title, String publisher, String isbn, String author, int ownerID) throws SQLException {
-        if (Server.bookExists(isbn, ownerID) == false) {
-            Connection con= Database.connect();
-            Statement stmt = con.createStatement();
-            String b_create = "Insert into book (title, publisher, isbn, author, ownerID) values ('" +title+ "','" +publisher+ "','" +isbn+ "','" +author+ "','" +ownerID+"');";
-            stmt.executeUpdate(b_create);
+        if (!Server.bookExists(isbn, ownerID)) {
+            Connection con= null;
+            con= Database.connect();
+            PreparedStatement preparedStatement= null;
+            String bCreate = "Insert into books (title, publisher, isbn, author, ownerID) values (?, ?, ?, ?, ?)";
+            preparedStatement = con.prepareStatement(bCreate);
+            preparedStatement.setString(1, title);
+            preparedStatement.setString(2, publisher);
+            preparedStatement.setString(3, isbn);
+            preparedStatement.setString(4, author);
+            preparedStatement.setInt(5, ownerID);
             //poslat cez socket dneska cez github
             System.out.println("Kniha bola registrovana");
-            stmt.close();
+            int pocetRiadkov = preparedStatement.executeUpdate();
+            if (pocetRiadkov>0){
+                System.out.println("Kniha bola registrovana a toto je pocet riadkov " +pocetRiadkov);
+            }
+            preparedStatement.close();
             con.close();
+
         } else
             System.out.println("Kniha uz existuje");
     }
     public static void deleteBook (String title, int ownerID) throws SQLException {
         //Statement stmt = conToDatabase();
-        if (Server.bookExists(title, ownerID) == true) {
-            Connection con= Database.connect();
-            Statement stmt = con.createStatement();
-            String b_delete = "delete from books where title= '" +title+ "'AND ownerID= '" +ownerID+ "');";
-            stmt.executeUpdate(b_delete);
-            //poslat cez socket
-            System.out.println("Kniha bola vymazana");
-            stmt.close();
+        if (Server.bookExists(title, ownerID)) {
+            Connection con= null;
+            con= Database.connect();
+            PreparedStatement preparedStatement= null;
+            String bDelete = "delete from books where title= ? and ownerID = ? ";
+            preparedStatement = con.prepareStatement(bDelete);
+            preparedStatement.setString(1, title);
+            preparedStatement.setInt(2, ownerID);
+            int pocetRiadkov = preparedStatement.executeUpdate();
+            if (pocetRiadkov>0){
+                System.out.println("Kniha bola vymazana a toto je pocet riadkov " +pocetRiadkov);
+            }
+            //System.out.println("Kniha bola vymazana");
+            preparedStatement.close();
             con.close();
         }
         else  System.out.println("Kniha neexistuje");
     }
-    public static void zobrazBook () throws SQLException {
-        Connection con= Database.connect();
-        Statement stmt = con.createStatement();
-        String vsicko= "select * from books;";
-        ResultSet resknihy= stmt.executeQuery(vsicko);
+    public static void zobrazBook (Socket socket, PrintWriter writer) throws SQLException {
+        Connection con= null;
+        con= Database.connect();
+        PreparedStatement preparedStatement= null;
+        ResultSet resknihy= null;
+        String vsicko= "select * from books ";
+        preparedStatement = con.prepareStatement(vsicko);
+        resknihy= preparedStatement.executeQuery();
+        Statement countStatement = con.createStatement();
+        ResultSet countResultSet = countStatement.executeQuery("SELECT COUNT(*) FROM books");
+        int rowCount=0;
+        if (countResultSet.next()) {
+            rowCount = countResultSet.getInt(1);
+            System.out.println("Total row count: " + rowCount);
+        }
+        countStatement.close();
+        countResultSet.close();
+        //System.out.println("tolkoto riadkov mam " + rowCount);
+        writer.println(rowCount);
         //poslem resknihy v sockete
-        stmt.close();
+        String[] uData= new String[6];
+        while (resknihy.next()) {
+            uData[0] = String.valueOf(resknihy.getInt(1));
+            System.out.println(uData[0]);
+            writer.println(uData[0]);
+            uData[1] = resknihy.getString(2);
+            writer.println(uData[1]);
+            System.out.println(uData[1]);
+            uData[2] = resknihy.getString(3);
+            writer.println(uData[2]);
+            System.out.println(uData[2]);
+            uData[3] = resknihy.getString(4);
+            writer.println(uData[3]);
+            System.out.println(uData[3]);
+            uData[4] = resknihy.getString(4);
+            writer.println(uData[4]);
+            System.out.println(uData[4]);
+            uData[5] = String.valueOf(resknihy.getInt(6));
+            writer.println(uData[5]);
+            System.out.println(uData[5]);
+        }
+        preparedStatement.close();
+        resknihy.close();
         con.close();
+
     }
 }
