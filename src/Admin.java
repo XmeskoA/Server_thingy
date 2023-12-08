@@ -1,4 +1,9 @@
-public class Admin {private int ID;
+/**
+ * Admin class on the server side represents an administrator in the library system
+ * It contains the ID, username, password, email information and godmode status which represents whether user is an admin or not
+ */
+public class Admin {
+    private int ID;
     private String username;
     private String password;
     private String email;

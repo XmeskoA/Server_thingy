@@ -3,13 +3,15 @@ import java.net.Socket;
 import java.sql.*;
 
 
+/**
+ * This class handles all the communication with server and all the data checks
+ */
 public class Server {
-    /*public static Statement conToDatabase () throws SQLException {
-        Connection con = Database.connect();
-        return (Statement) con;
-    }*/
-    //Connection con = Database.connect();
-
+    /**
+     * This method checks if user that was logged in is Admin or not
+     * @param godmode variable that stores user mode
+     * @return
+     */
     public static boolean isAdmin(int godmode) {
         if (godmode == 0) {
             return false;
@@ -18,6 +20,12 @@ public class Server {
         } else return false;
     }
 
+    /**
+     * This method checks if user exists in Database
+     * @param email This is an email that client sent this method to verify its existence
+     * @return
+     * @throws SQLException
+     */
     public static boolean userExists(String email) throws SQLException {
         ResultSet rset = null;
         PreparedStatement preparedStatement = null;
@@ -38,8 +46,6 @@ public class Server {
                 return false;
             } else {
                 // ResultSet is not empty
-                // Extract data if needed
-                System.out.println("rset was full for some reason");
                 return true;
             }
         } catch (SQLException e) {
@@ -65,6 +71,13 @@ public class Server {
         }
     }
 
+    /**
+     * Same method as the one above, but for books
+     * @param nazov variable stores title of the book
+     * @param ownerID variable stores ID of an owner
+     * @return
+     * @throws SQLException
+     */
     public static boolean bookExists(String nazov, int ownerID) throws SQLException {
         ResultSet rset = null;
         PreparedStatement preparedStatement = null;
@@ -85,8 +98,6 @@ public class Server {
                 return false;
             } else {
                 // ResultSet is not empty
-                // Extract data if needed
-                System.out.println("rset was full for some reason");
                 return true;
             }
         } catch (SQLException e) {
@@ -112,10 +123,16 @@ public class Server {
         }
     }
 
+    /**
+     * This method adds user to the Database if he isn't already there
+     * @param uname variable that stores name of the user
+     * @param email variable that stores mail of the user
+     * @param passw variable that stores password of the user
+     * @return
+     * @throws SQLException
+     */
     public static String [] addUser(String uname, String email, String passw) throws SQLException {
-        //Statement stmt = conToDatabase();
         String[] uData= new String[3];
-        System.out.println("toto je moj email v adduser "+ email);
         if (!Server.userExists(email)) {
             Connection con= null;
             con= Database.connect();
@@ -138,15 +155,21 @@ public class Server {
             preparedStatement.close();
             con.close();
         } else{
-            //System.out.println("User uz existuje");
             uData[0]="nula";
         }
         return (uData);
     }
+
+    /**
+     * This method verifies if user can login
+     * @param email variable stores user email from client
+     * @param passw variable stores user password from client
+     * @return Array filled with users info from the Database
+     * @throws SQLException
+     */
     public static String[] loginUser (String email, String passw) throws SQLException {
         int a=1;
         String[] uData = new String[5];
-        System.out.println("som v loginUser funkcii");
 
         boolean userExists = Server.userExists(email);
         System.out.println("existuje user? "+userExists);
@@ -161,19 +184,13 @@ public class Server {
             preparedStatement.setString(2, email);
             preparedStatement.setString(3, passw);
             rset = preparedStatement.executeQuery();
-            //con.commit();
 
             while (rset.next()) {
                 uData[0] = rset.getString(1);
-                System.out.println(uData[0]);
                 uData[1] = rset.getString(2);
-                System.out.println(uData[1]);
                 uData[2] = rset.getString(3);
-                System.out.println(uData[2]);
                 uData[3] = String.valueOf(rset.getInt(4));
-                System.out.println(uData[3]);
                 uData[4] = String.valueOf(rset.getInt(5));
-                System.out.println(uData[4]);
             } if(a==0)  {
                 uData[0] = "nula";
             }
@@ -186,7 +203,15 @@ public class Server {
         return(uData);
     }
 
-
+    /**
+     * This method adds a new book to the database
+     * @param title
+     * @param publisher
+     * @param isbn
+     * @param author
+     * @param ownerID
+     * @throws SQLException
+     */
     public static void addBook(String title, String publisher, String isbn, String author, int ownerID) throws SQLException {
         if (!Server.bookExists(isbn, ownerID)) {
             Connection con= null;
@@ -199,8 +224,6 @@ public class Server {
             preparedStatement.setString(3, isbn);
             preparedStatement.setString(4, author);
             preparedStatement.setInt(5, ownerID);
-            //poslat cez socket dneska cez github
-            System.out.println("Kniha bola registrovana");
             int pocetRiadkov = preparedStatement.executeUpdate();
             if (pocetRiadkov>0){
                 System.out.println("Kniha bola registrovana a toto je pocet riadkov " +pocetRiadkov);
@@ -211,6 +234,13 @@ public class Server {
         } else
             System.out.println("Kniha uz existuje");
     }
+
+    /**
+     * This method deletes a book from the database
+     * @param title
+     * @param ownerID
+     * @throws SQLException
+     */
     public static void deleteBook (String title, int ownerID) throws SQLException {
         //Statement stmt = conToDatabase();
         if (Server.bookExists(title, ownerID)) {
@@ -225,12 +255,18 @@ public class Server {
             if (pocetRiadkov>0){
                 System.out.println("Kniha bola vymazana a toto je pocet riadkov " +pocetRiadkov);
             }
-            //System.out.println("Kniha bola vymazana");
             preparedStatement.close();
             con.close();
         }
         else  System.out.println("Kniha neexistuje");
     }
+
+    /**
+     * This method takes all books from our book table and sends it to user
+     * @param socket
+     * @param writer
+     * @throws SQLException
+     */
     public static void zobrazBook (Socket socket, PrintWriter writer) throws SQLException {
         Connection con= null;
         con= Database.connect();
@@ -244,37 +280,123 @@ public class Server {
         int rowCount=0;
         if (countResultSet.next()) {
             rowCount = countResultSet.getInt(1);
-            System.out.println("Total row count: " + rowCount);
         }
         countStatement.close();
         countResultSet.close();
-        //System.out.println("tolkoto riadkov mam " + rowCount);
         writer.println(rowCount);
-        //poslem resknihy v sockete
         String[] uData= new String[6];
         while (resknihy.next()) {
             uData[0] = String.valueOf(resknihy.getInt(1));
-            System.out.println(uData[0]);
             writer.println(uData[0]);
             uData[1] = resknihy.getString(2);
             writer.println(uData[1]);
-            System.out.println(uData[1]);
             uData[2] = resknihy.getString(3);
             writer.println(uData[2]);
-            System.out.println(uData[2]);
             uData[3] = resknihy.getString(4);
             writer.println(uData[3]);
-            System.out.println(uData[3]);
-            uData[4] = resknihy.getString(4);
+            uData[4] = resknihy.getString(5);
             writer.println(uData[4]);
-            System.out.println(uData[4]);
             uData[5] = String.valueOf(resknihy.getInt(6));
             writer.println(uData[5]);
-            System.out.println(uData[5]);
         }
         preparedStatement.close();
         resknihy.close();
         con.close();
 
+    }
+
+    /**
+     * This method gets us username of an owner of book we previously selected
+     * @param username
+     * @return
+     * @throws SQLException
+     */
+    public static int getIDbyUsername(String username) throws SQLException {
+        Connection con = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        try {
+            con = Database.connect();
+            String query = "select ID from users where username = ? or email = ?";
+            preparedStatement = con.prepareStatement(query);
+            preparedStatement.setString(1, username);
+            preparedStatement.setString(2, username);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getInt("ID");
+            } else {
+                return -1;
+            }
+        } finally {
+            if (resultSet != null) resultSet.close();
+            if (preparedStatement != null) preparedStatement.close();
+            if (con != null) con.close();
+        }
+    }
+
+    /**
+     * This method gets me a username using owners id of a book received from client
+     * @param ownerID
+     * @return
+     * @throws SQLException
+     */
+    public static String getUsernameByID (int ownerID) throws SQLException {
+        Connection con = null;
+        PreparedStatement preparedStatement = null;
+        ResultSet resultSet = null;
+        try {
+            con = Database.connect();
+            String query = "select username from users where ID= ? ";
+            preparedStatement = con.prepareStatement(query);
+            preparedStatement.setInt(1, ownerID);
+            resultSet = preparedStatement.executeQuery();
+
+            if (resultSet.next()) {
+                return resultSet.getString("username");
+            } else {
+                return "blyat";
+            }
+        } finally {
+            if (resultSet != null) resultSet.close();
+            if (preparedStatement != null) preparedStatement.close();
+            if (con != null) con.close();
+        }
+
+    }
+
+    /**
+     * This method deletes user from database
+     * @param email
+     */
+    public static void deleteUser (String email) {
+        Connection con = null;
+        PreparedStatement preparedStatement = null;
+        try {
+            con = Database.connect();
+            String deleteUserQuery = "delete from users where email = ? or username = ?";
+            preparedStatement = con.prepareStatement(deleteUserQuery);
+            preparedStatement.setString(1, email);
+            preparedStatement.setString(2, email);
+            int rowCount = preparedStatement.executeUpdate();
+            if (rowCount > 0) {
+                System.out.println("Pouzivatel " + email + " bol odstraneny");
+            } else {
+                System.out.println("Pouzivatel " + email + " nebol najdeny");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                if (preparedStatement != null) {
+                    preparedStatement.close();
+                }
+                if (con != null) {
+                    con.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
